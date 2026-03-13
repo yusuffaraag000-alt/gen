@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>Epistasis Lab - Color-Coded Gene Cards</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-dark: #2c3e50;
+            --text-light: #ecf0f1;
+            --shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        body {
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            padding: clamp(10px, 2vw, 20px);
+        }
+
+        .container {
+            max-width: 2000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: clamp(1.8rem, 5vw, 3rem);
+            margin-bottom: clamp(5px, 1vh, 10px);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            margin-bottom: clamp(15px, 3vh, 30px);
+            padding: 0 10px;
+        }
+
+        .cases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
+            gap: clamp(15px, 2vw, 25px);
+            margin-bottom: 20px;
+        }
+
+        .case-card {
+            background: var(--card-bg);
+            border-radius: clamp(15px, 2vw, 20px);
+            padding: clamp(15px, 2vw, 20px);
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255,255,255,0.2);
+            height: fit-content;
+        }
+
+        .case-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: calc(-1 * clamp(15px, 2vw, 20px)) calc(-1 * clamp(15px, 2vw, 20px)) clamp(15px, 2vw, 20px) calc(-1 * clamp(15px, 2vw, 20px));
+            padding: clamp(12px, 2vw, 15px) clamp(15px, 2vw, 20px);
+            border-radius: clamp(15px, 2vw, 20px) clamp(15px, 2vw, 20px) 0 0;
+            color: white;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .case-title {
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            font-weight: bold;
+        }
+
+        .case-ratio {
+            background: rgba(255,255,255,0.2);
+            padding: clamp(5px, 1vw, 8px) clamp(12px, 2vw, 20px);
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            backdrop-filter: blur(5px);
+            white-space: nowrap;
+        }
+
+        .gene-panel {
+            background: #f8f9fa;
+            border-radius: clamp(10px, 1.5vw, 15px);
+            padding: clamp(10px, 1.5vw, 15px);
+            margin-bottom: clamp(12px, 2vh, 20px);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: clamp(10px, 1.5vw, 15px);
+        }
+
+        .gene-locus {
+            text-align: center;
+            padding: clamp(8px, 1.2vw, 10px);
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .locus-title {
+            font-size: clamp(1rem, 2vw, 1.1rem);
+            color: #2a5298;
+            font-weight: bold;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+
+        .allele-info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: clamp(8px, 1.5vw, 15px);
+            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
+        }
+
+        .allele-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .workspace {
+            background: #f0f4f8;
+            border-radius: clamp(12px, 2vw, 15px);
+            padding: clamp(12px, 2vw, 18px);
+            margin-bottom: 15px;
+        }
+
+        .cards-pool {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: clamp(8px, 1.5vw, 12px);
+            margin-bottom: clamp(15px, 2.5vh, 25px);
+            padding: clamp(10px, 1.5vw, 12px);
+            background: rgba(255,255,255,0.5);
+            border-radius: 50px;
+            justify-items: center;
+        }
+
+        .drag-card {
+            width: 100%;
+            max-width: 110px;
+            min-width: 70px;
+            aspect-ratio: 1 / 1.3;
+            border-radius: 15px;
+            padding: clamp(5px, 1vw, 8px);
+            text-align: center;
+            cursor: grab;
+            transition: all 0.2s ease;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .drag-card:active {
+            cursor: grabbing;
+            opacity: 0.9;
+            transform: scale(0.98);
+        }
+
+        .card-gene {
+            font-size: clamp(1.5rem, 4vw, 2.2rem);
+            font-weight: bold;
+            margin-bottom: 3px;
+            line-height: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        .card-phenotype {
+            font-size: clamp(0.65rem, 1.6vw, 0.8rem);
+            background: rgba(255,255,255,0.3);
+            padding: 4px 2px;
+            border-radius: 8px;
+            backdrop-filter: blur(2px);
+            color: white;
+            font-weight: bold;
+        }
+
+        .card-locus-badge {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            width: clamp(20px, 4vw, 25px);
+            height: clamp(20px, 4vw, 25px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            border: 2px solid white;
+        }
+
+        .drop-zone {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto 1fr;
+            align-items: center;
+            gap: clamp(5px, 1.5vw, 15px);
+            margin: 15px 0;
+        }
+
+        .drop-area {
+            width: 100%;
+            aspect-ratio: 1 / 1.2;
+            background: rgba(255,255,255,0.9);
+            border: 3px dashed #95a5a6;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            padding: 5px;
+            min-height: 100px;
+        }
+
+        .drop-area.drag-over {
+            background: rgba(46, 204, 113, 0.2);
+            border-style: solid;
+            transform: scale(1.02);
+        }
+
+        .drop-area.has-card {
+            background: white;
+            border-style: solid;
+        }
+
+        .drop-area .drag-card {
+            max-width: 100%;
+            height: auto;
+            cursor: default;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .drop-area-label {
+            font-size: clamp(0.65rem, 1.6vw, 0.8rem);
+            color: #7f8c8d;
+            text-align: center;
+            padding: 0 5px;
+        }
+
+        .interaction-symbol {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: bold;
+            color: #34495e;
+            text-align: center;
+        }
+
+        .result-box {
+            width: 100%;
+            aspect-ratio: 1 / 1.2;
+            background: linear-gradient(145deg, #95a5a6, #7f8c8d);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+            padding: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .result-genotype {
+            font-size: clamp(1.2rem, 3.5vw, 1.8rem);
+            font-weight: bold;
+            line-height: 1.2;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .result-phenotype {
+            font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+            background: rgba(255,255,255,0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-top: 5px;
+            text-align: center;
+            font-weight: bold;
+            backdrop-filter: blur(2px);
+        }
+
+        .phenotype-table {
+            background: white;
+            border-radius: 12px;
+            padding: clamp(10px, 1.8vw, 15px);
+            margin: 15px 0;
+            border: 1px solid #e0e0e0;
+            overflow-x: auto;
+        }
+
+        .phenotype-table h4 {
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: clamp(0.9rem, 2.2vw, 1rem);
+            flex-wrap: wrap;
+        }
+
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: clamp(5px, 1.2vw, 8px);
+            min-width: 280px;
+        }
+
+        .table-item {
+            text-align: center;
+            padding: clamp(5px, 1.2vw, 8px);
+            border-radius: 6px;
+            font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+            font-weight: 500;
+        }
+
+        .example-box {
+            background: #fff3e0;
+            border-radius: 10px;
+            padding: clamp(10px, 1.8vw, 15px);
+            border-left: 4px solid #f39c12;
+            font-size: clamp(0.8rem, 1.9vw, 0.95rem);
+        }
+
+        .reset-btn {
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: clamp(10px, 1.8vw, 14px);
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            font-size: clamp(0.85rem, 2vw, 1rem);
+        }
+
+        .reset-btn:hover {
+            background: #2c3e50;
+            transform: translateY(-2px);
+        }
+
+        .instructions {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            padding: clamp(12px, 2vh, 18px);
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+            font-size: clamp(0.9rem, 2.2vw, 1.1rem);
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: clamp(15px, 3vw, 30px);
+            color: white;
+            margin: 25px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 50px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: clamp(5px, 1.5vw, 10px);
+            font-size: clamp(0.8rem, 2vw, 1rem);
+        }
+
+        .legend-color {
+            width: clamp(20px, 3vw, 25px);
+            height: clamp(20px, 3vw, 25px);
+            border-radius: 6px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: rgba(255,255,255,0.8);
+            font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+        }
+
+        @media (max-width: 600px) {
+            .cards-pool {
+                grid-template-columns: repeat(2, 1fr);
+                border-radius: 25px;
+            }
+            
+            .drop-zone {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .interaction-symbol {
+                transform: rotate(90deg);
+            }
+            
+            .gene-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .case-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .legend {
+                flex-direction: column;
+                align-items: center;
+                border-radius: 25px;
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .cases-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .drag-card {
+                max-width: 130px;
+            }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .drag-card {
+                cursor: default;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            .drag-card:active {
+                transform: scale(0.95);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧬 Epistasis Color-Coded Lab</h1>
+        <p class="subtitle">Each card color matches its phenotype - Drag & Drop to see interactions</p>
+
+        <div class="instructions">
+            <strong>🎮 How to use:</strong> Drag cards to drop zones. Colors show the actual phenotype!
+        </div>
+
+        <div class="cases-grid" id="casesGrid"></div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #27ae60;"></div>
+                <span>Locus A Cards</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e67e22;"></div>
+                <span>Locus B Cards</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: white; border: 2px solid black;"></div>
+                <span>Cards match their phenotype color</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Interactive Epistasis Simulator - Colors represent actual phenotypes for easy learning</p>
+        </div>
+    </div>
+
+    <script>
+        // تعريف ألوان الصفات لكل حالة
+        const phenotypeColors = {
+            // Case 1: Recessive Epistasis (Labrador)
+            black: "#2c3e50",
+            brown: "#8B4513",
+            yellow: "#f1c40f",
+            
+            // Case 2: Dominant Epistasis (Squash)
+            white: "#ecf0f1",
+            yellow2: "#f1c40f",
+            green: "#27ae60",
+            
+            // Case 3: Duplicate Recessive (Sweet Pea)
+            purple: "#8e44ad",
+            white2: "#bdc3c7",
+            
+            // Case 4: Duplicate Dominant (Shepherd's Purse)
+            triangular: "#e67e22",
+            oval: "#3498db",
+            
+            // Case 5: Dominant & Recessive (Chicken)
+            colored: "#e74c3c",
+            white3: "#ecf0f1",
+            
+            // Case 6: Cumulative (Squash shape)
+            disc: "#27ae60",
+            sphere: "#f39c12",
+            long: "#e74c3c"
+        };
+
+        const epistasisCases = [
+            {
+                id: 1,
+                name: "Recessive Epistasis",
+                ratio: "9:3:4",
+                geneA: { 
+                    dominant: { symbol: "A_", phenotype: "Pigment", color: "#27ae60" },
+                    recessive: { symbol: "aa", phenotype: "No Pigment", color: "#f1c40f" }
+                },
+                geneB: { 
+                    dominant: { symbol: "B_", phenotype: "Black", color: "#2c3e50" },
+                    recessive: { symbol: "bb", phenotype: "Brown", color: "#8B4513" }
+                },
+                example: "Labrador Coat Color - ee (aa) masks B gene",
+                phenotypeTable: [
+                    { genotype: "A_B_", phenotype: "Black", ratio: 9, color: "#2c3e50" },
+                    { genotype: "A_bb", phenotype: "Brown", ratio: 3, color: "#8B4513" },
+                    { genotype: "aaB_", phenotype: "Yellow", ratio: 3, color: "#f1c40f" },
+                    { genotype: "aabb", phenotype: "Yellow", ratio: 1, color: "#f1c40f" }
+                ],
+                getPhenotype: (aGeno, bGeno) => {
+                    if (aGeno === 'aa') return { name: "Yellow", color: "#f1c40f" };
+                    else if (bGeno === 'B_') return { name: "Black", color: "#2c3e50" };
+                    else return { name: "Brown", color: "#8B4513" };
+                }
+            },
+            {
+                id: 2,
+                name: "Dominant Epistasis",
+                ratio: "12:3:1",
+                geneA: { 
+                    dominant: { symbol: "W_", phenotype: "White", color: "#ecf0f1" },
+                    recessive: { symbol: "ww", phenotype: "Color Allowed", color: "#f1c40f" }
+                },
+                geneB: { 
+                    dominant: { symbol: "Y_", phenotype: "Yellow", color: "#f1c40f" },
+                    recessive: { symbol: "yy", phenotype: "Green", color: "#27ae60" }
+                },
+                example: "Squash Fruit Color - W (white) masks Y gene",
+                phenotypeTable: [
+                    { genotype: "W_Y_", phenotype: "White", ratio: 9, color: "#ecf0f1" },
+                    { genotype: "W_yy", phenotype: "White", ratio: 3, color: "#ecf0f1" },
+                    { genotype: "wwY_", phenotype: "Yellow", ratio: 3, color: "#f1c40f" },
+                    { genotype: "wwyy", phenotype: "Green", ratio: 1, color: "#27ae60" }
+                ],
+                getPhenotype: (aGeno, bGeno) => {
+                    if (aGeno === 'W_') return { name: "White", color: "#ecf0f1" };
+                    else if (bGeno === 'Y_') return { name: "Yellow", color: "#f1c40f" };
+                    else return { name: "Green", color: "#27ae60" };
+                }
+            },
+            {
+                id: 3,
+                name: "Duplicate Recessive Epistasis",
+                ratio: "9:7",
+                geneA: { 
+                    dominant: { symbol: "C_", phenotype: "Color Potential", color: "#8e44ad" },
+                    recessive: { symbol: "cc", phenotype: "No Color", color: "#bdc3c7" }
+                },
+                geneB: { 
+                    dominant: { symbol: "P_", phenotype: "Color Potential", color: "#8e44ad" },
+                    recessive: { symbol: "pp", phenotype: "No Color", color: "#bdc3c7" }
+                },
+                example: "Sweet Pea Flower Color - both dominant needed for purple",
+                phenotypeTable: [
+                    { genotype: "C_P_", phenotype: "Purple", ratio: 9, color: "#8e44ad" },
+                    { genotype: "C_pp", phenotype: "White", ratio: 3, color: "#bdc3c7" },
+                    { genotype: "ccP_", phenotype: "White", ratio: 3, color: "#bdc3c7" },
+                    { genotype: "ccpp", phenotype: "White", ratio: 1, color: "#bdc3c7" }
+                ],
+                getPhenotype: (aGeno, bGeno) => {
+                    if (aGeno === 'C_' && bGeno === 'P_') return { name: "Purple", color: "#8e44ad" };
+                    else return { name: "White", color: "#bdc3c7" };
+                }
+            },
+            {
+                id: 4,
+                name: "Duplicate Dominant Epistasis",
+                ratio: "15:1",
+                geneA: { 
+                    dominant: { symbol: "T_", phenotype: "Triangular", color: "#e67e22" },
+                    recessive: { symbol: "tt", phenotype: "Non-Triangular", color: "#3498db" }
+                },
+                geneB: { 
+                    dominant: { symbol: "D_", phenotype: "Triangular", color: "#e67e22" },
+                    recessive: { symbol: "dd", phenotype: "Non-Triangular", color: "#3498db" }
+                },
+                example: "Shepherd's Purse Seed Shape",
+                phenotypeTable: [
+                    { genotype: "T_D_", phenotype: "Triangular", ratio: 9, color: "#e67e22" },
+                    { genotype: "T_dd", phenotype: "Triangular", ratio: 3, color: "#e67e22" },
+                    { genotype: "ttD_", phenotype: "Triangular", ratio: 3, color: "#e67e22" },
+                    { genotype: "ttdd", phenotype: "Oval", ratio: 1, color: "#3498db" }
+                ],
+                getPhenotype: (aGeno, bGeno) => {
+                    if (aGeno === 'tt' && bGeno === 'dd') return { name: "Oval", color: "#3498db" };
+                    else return { name: "Triangular", color: "#e67e22" };
+                }
+            },
+            {
+                id: 5,
+                name: "Dominant & Recessive Epistasis",
+                ratio: "13:3",
+                geneA: { 
+                    dominant: { symbol: "I_", phenotype: "Inhibitor", color: "#e74c3c" },
+                    recessive: { symbol: "ii", phenotype: "No Inhibition", color: "#2ecc71" }
+                },
+                geneB: { 
+                    dominant: { symbol: "C_", phenotype: "Color", color: "#f39c12" },
+                    recessive: { symbol: "cc", phenotype: "No Color", color: "#95a5a6" }
+                },
+                example: "Chicken Feather Color - I inhibits color",
+                phenotypeTable: [
+                    { genotype: "I_C_", phenotype: "White", ratio: 9, color: "#ecf0f1" },
+                    { genotype: "I_cc", phenotype: "White", ratio: 3, color: "#ecf0f1" },
+                    { genotype: "iiC_", phenotype: "Colored", ratio: 3, color: "#e74c3c" },
+                    { genotype: "iicc", phenotype: "White", ratio: 1, color: "#ecf0f1" }
+                ],
+                getPhenotype: (aGeno, bGeno) => {
+                    if (aGeno === 'ii' && bGeno === 'C_') return { name: "Colored", color: "#e74c3c" };
+                    else return { name: "White", color: "#ecf0f1" };
+                }
+            },
+            {
+                id: 6,
+                name: "Duplicate Genes Cumulative",
+                ratio: "9:6:1",
+                geneA: { 
+                    dominant: { symbol: "A_", phenotype: "Disc", color: "#27ae60" },
+                    recessive: { symbol: "aa", phenotype: "Round", color: "#f39c12" }
+                },
+                geneB: { 
+                    dominant: { symbol: "B_", phenotype: "Disc", color: "#27ae60" },
+                    recessive: { symbol: "bb", phenotype: "Round", color: "#f39c12" }
+                },
+                example: "Squash Fruit Shape - cumulative effect",
+                phenotypeTable: [
+                    { genotype: "A_B_", phenotype: "Disc", ratio: 9, color: "#27ae60" },
+                    { genotype: "A_bb", phenotype: "Sphere", ratio: 3, color: "#f39c12" },
+                    { genotype: "aaB_", phenotype: "Sphere", ratio: 3, color: "#f39c12" },
+                    { genotype: "aabb", phenotype: "Long", ratio: 1, color: "#e74c3c" }
+                ],
+                getPhenotype: (aGeno, bGeno) => {
+                    if (aGeno === 'A_' && bGeno === 'B_') return { name: "Disc", color: "#27ae60" };
+                    else if (aGeno === 'A_' || bGeno === 'B_') return { name: "Sphere", color: "#f39c12" };
+                    else return { name: "Long", color: "#e74c3c" };
+                }
+            }
+        ];
+
+        function createDraggableCard(caseData, locus, type) {
+            const card = document.createElement('div');
+            card.className = 'drag-card';
+            card.setAttribute('draggable', 'true');
+            card.setAttribute('data-locus', locus);
+            card.setAttribute('data-type', type);
+            
+            const geneData = locus === 'A' ? caseData.geneA : caseData.geneB;
+            const alleleData = type === 'dominant' ? geneData.dominant : geneData.recessive;
+            
+            // Set background color based on phenotype
+            card.style.background = `linear-gradient(145deg, ${alleleData.color}, ${adjustColor(alleleData.color, -20)})`;
+            
+            card.innerHTML = `
+                <div class="card-locus-badge">${locus}</div>
+                <div class="card-gene">${alleleData.symbol}</div>
+                <div class="card-phenotype">${alleleData.phenotype}</div>
+            `;
+
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    locus: locus,
+                    type: type,
+                    caseId: caseData.id
+                }));
+                card.classList.add('dragging');
+            });
+
+            card.addEventListener('dragend', (e) => {
+                card.classList.remove('dragging');
+            });
+
+            return card;
+        }
+
+        function adjustColor(hex, percent) {
+            // Simple function to lighten/darken colors
+            try {
+                let R = parseInt(hex.substring(1,3), 16);
+                let G = parseInt(hex.substring(3,5), 16);
+                let B = parseInt(hex.substring(5,7), 16);
+                
+                R = Math.min(255, Math.max(0, R + percent));
+                G = Math.min(255, Math.max(0, G + percent));
+                B = Math.min(255, Math.max(0, B + percent));
+                
+                return `#${((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1)}`;
+            } catch {
+                return hex;
+            }
+        }
+
+        function createPhenotypeTable(tableData) {
+            const table = document.createElement('div');
+            table.className = 'phenotype-table';
+            
+            let html = '<h4>📊 Phenotypic Ratios:</h4><div class="table-grid">';
+            tableData.forEach(item => {
+                html += `
+                    <div class="table-item genotype" style="background: ${item.color}20; color: ${item.color}">${item.genotype}</div>
+                    <div class="table-item phenotype" style="background: ${item.color}; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.3)">${item.phenotype}</div>
+                    <div class="table-item genotype" style="background: ${item.color}20; color: ${item.color}">${item.ratio}</div>
+                `;
+            });
+            html += '</div>';
+            
+            table.innerHTML = html;
+            return table;
+        }
+
+        function createCaseCard(caseData) {
+            const card = document.createElement('div');
+            card.className = 'case-card';
+
+            const header = document.createElement('div');
+            header.className = 'case-header';
+            header.innerHTML = `
+                <span class="case-title">${caseData.name}</span>
+                <span class="case-ratio">${caseData.ratio}</span>
+            `;
+
+            const genePanel = document.createElement('div');
+            genePanel.className = 'gene-panel';
+            genePanel.innerHTML = `
+                <div class="gene-locus">
+                    <div class="locus-title">Locus A</div>
+                    <div class="allele-info">
+                        <span class="allele-item">
+                            <span class="color-dot" style="background: ${caseData.geneA.dominant.color}"></span>
+                            ${caseData.geneA.dominant.symbol}: ${caseData.geneA.dominant.phenotype}
+                        </span>
+                        <span class="allele-item">
+                            <span class="color-dot" style="background: ${caseData.geneA.recessive.color}"></span>
+                            ${caseData.geneA.recessive.symbol}: ${caseData.geneA.recessive.phenotype}
+                        </span>
+                    </div>
+                </div>
+                <div class="gene-locus">
+                    <div class="locus-title">Locus B</div>
+                    <div class="allele-info">
+                        <span class="allele-item">
+                            <span class="color-dot" style="background: ${caseData.geneB.dominant.color}"></span>
+                            ${caseData.geneB.dominant.symbol}: ${caseData.geneB.dominant.phenotype}
+                        </span>
+                        <span class="allele-item">
+                            <span class="color-dot" style="background: ${caseData.geneB.recessive.color}"></span>
+                            ${caseData.geneB.recessive.symbol}: ${caseData.geneB.recessive.phenotype}
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            const workspace = document.createElement('div');
+            workspace.className = 'workspace';
+
+            const cardsPool = document.createElement('div');
+            cardsPool.className = 'cards-pool';
+            
+            cardsPool.appendChild(createDraggableCard(caseData, 'A', 'dominant'));
+            cardsPool.appendChild(createDraggableCard(caseData, 'A', 'recessive'));
+            cardsPool.appendChild(createDraggableCard(caseData, 'B', 'dominant'));
+            cardsPool.appendChild(createDraggableCard(caseData, 'B', 'recessive'));
+
+            const dropZone = document.createElement('div');
+            dropZone.className = 'drop-zone';
+
+            const dropAreaA = document.createElement('div');
+            dropAreaA.className = 'drop-area';
+            dropAreaA.setAttribute('data-locus', 'A');
+            dropAreaA.innerHTML = `<div class="drop-area-label">Drop Locus A</div>`;
+
+            const dropAreaB = document.createElement('div');
+            dropAreaB.className = 'drop-area';
+            dropAreaB.setAttribute('data-locus', 'B');
+            dropAreaB.innerHTML = `<div class="drop-area-label">Drop Locus B</div>`;
+
+            const plusSymbol = document.createElement('div');
+            plusSymbol.className = 'interaction-symbol';
+            plusSymbol.textContent = '+';
+
+            const equalsSymbol = document.createElement('div');
+            equalsSymbol.className = 'interaction-symbol';
+            equalsSymbol.textContent = '=';
+
+            const resultBox = document.createElement('div');
+            resultBox.className = 'result-box';
+            resultBox.innerHTML = `
+                <div class="result-genotype">??</div>
+                <div class="result-phenotype">No Selection</div>
+            `;
+
+            dropZone.appendChild(dropAreaA);
+            dropZone.appendChild(plusSymbol);
+            dropZone.appendChild(dropAreaB);
+            dropZone.appendChild(equalsSymbol);
+            dropZone.appendChild(resultBox);
+
+            workspace.appendChild(cardsPool);
+            workspace.appendChild(dropZone);
+
+            const phenotypeTable = createPhenotypeTable(caseData.phenotypeTable);
+
+            const exampleBox = document.createElement('div');
+            exampleBox.className = 'example-box';
+            exampleBox.innerHTML = `
+                <strong>📝 Example:</strong> ${caseData.example}
+            `;
+
+            const resetBtn = document.createElement('button');
+            resetBtn.className = 'reset-btn';
+            resetBtn.textContent = '🔄 Reset Drop Zones';
+
+            let currentACard = null;
+            let currentBCard = null;
+
+            function updateResult() {
+                if (currentACard && currentBCard) {
+                    const aType = currentACard.getAttribute('data-type');
+                    const bType = currentBCard.getAttribute('data-type');
+                    
+                    const aGeno = aType === 'dominant' ? 
+                        caseData.geneA.dominant.symbol : 
+                        caseData.geneA.recessive.symbol;
+                    
+                    const bGeno = bType === 'dominant' ? 
+                        caseData.geneB.dominant.symbol : 
+                        caseData.geneB.recessive.symbol;
+                    
+                    const result = caseData.getPhenotype(
+                        aType === 'dominant' ? 'A_' : 'aa',
+                        bType === 'dominant' ? 'B_' : 'bb'
+                    );
+                    
+                    resultBox.style.background = `linear-gradient(145deg, ${result.color}, ${adjustColor(result.color, -20)})`;
+                    resultBox.innerHTML = `
+                        <div class="result-genotype">${aGeno} ${bGeno}</div>
+                        <div class="result-phenotype">${result.name}</div>
+                    `;
+                }
+            }
+
+            [dropAreaA, dropAreaB].forEach(area => {
+                area.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    area.classList.add('drag-over');
+                });
+
+                area.addEventListener('dragleave', () => {
+                    area.classList.remove('drag-over');
+                });
+
+                area.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    area.classList.remove('drag-over');
+                    
+                    try {
+                        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        
+                        if (data.caseId !== caseData.id) {
+                            alert(`❌ This card belongs to another case!`);
+                            return;
+                        }
+                        
+                        const locus = area.getAttribute('data-locus');
+                        if (data.locus !== locus) {
+                            alert(`❌ Wrong locus! This drop zone is for Locus ${locus}`);
+                            return;
+                        }
+
+                        if (locus === 'A' && currentACard) {
+                            currentACard.remove();
+                        } else if (locus === 'B' && currentBCard) {
+                            currentBCard.remove();
+                        }
+
+                        const newCard = createDraggableCard(caseData, data.locus, data.type);
+                        newCard.setAttribute('draggable', 'false');
+                        newCard.style.cursor = 'default';
+                        
+                        area.innerHTML = '';
+                        area.appendChild(newCard);
+                        area.classList.add('has-card');
+
+                        if (locus === 'A') {
+                            currentACard = newCard;
+                        } else {
+                            currentBCard = newCard;
+                        }
+
+                        updateResult();
+                    } catch (error) {
+                        console.error('Drop error:', error);
+                    }
+                });
+            });
+
+            resetBtn.addEventListener('click', () => {
+                dropAreaA.innerHTML = '<div class="drop-area-label">Drop Locus A</div>';
+                dropAreaB.innerHTML = '<div class="drop-area-label">Drop Locus B</div>';
+                dropAreaA.classList.remove('has-card');
+                dropAreaB.classList.remove('has-card');
+                
+                resultBox.style.background = 'linear-gradient(145deg, #95a5a6, #7f8c8d)';
+                resultBox.innerHTML = `
+                    <div class="result-genotype">??</div>
+                    <div class="result-phenotype">No Selection</div>
+                `;
+                
+                currentACard = null;
+                currentBCard = null;
+            });
+
+            card.appendChild(header);
+            card.appendChild(genePanel);
+            card.appendChild(workspace);
+            card.appendChild(phenotypeTable);
+            card.appendChild(exampleBox);
+            card.appendChild(resetBtn);
+
+            return card;
+        }
+
+        const casesGrid = document.getElementById('casesGrid');
+        epistasisCases.forEach(caseData => {
+            casesGrid.appendChild(createCaseCard(caseData));
+        });
+    </script>
+</body>
+</html>
