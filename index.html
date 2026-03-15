@@ -111,10 +111,10 @@ const epistasisCases=[
   example:"Corn Kernel Color - aa + B_ gives Pink, all others Red",
   getPhenotype:(a,b)=>(a==='aa' && b.startsWith("B")) ? {name:"Pink", color:"#FFC0CB"} : {name:"Red", color:"#c0392b"},
   phenotypeTable:[
-    {genotype:"aaB_",phenotype:"Pink",ratio:3},
-    {genotype:"aabb",phenotype:"Red",ratio:1},
-    {genotype:"iiB_",phenotype:"Red",ratio:9}, // باقي الاحتمالات
-    {genotype:"ii bb",phenotype:"Red",ratio:3}
+    {genotype:"A_B_",phenotype:"Pink",ratio:3},
+    {genotype:"aa bb",phenotype:"Red",ratio:1},
+    {genotype:"A_bb",phenotype:"Red",ratio:9}, // باقي الاحتمالات
+    {genotype:"aa B_",phenotype:"Red",ratio:3}
   ]
 }
 ];
