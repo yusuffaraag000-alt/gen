@@ -30,7 +30,7 @@ h1{text-align:center;margin-bottom:10px;font-size:2.5rem;text-shadow:2px 2px 5px
 .result-box{width:90px;height:100px;background:linear-gradient(145deg,#95a5a6,#7f8c8d);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;box-shadow:0 8px 15px rgba(0,0,0,0.2);transition:all 0.3s ease;}
 .result-genotype{font-size:1rem;text-align:center;font-weight:bold;}
 .result-phenotype{font-size:0.8rem;text-align:center;background:rgba(0,0,0,0.2);padding:2px 5px;border-radius:12px;margin-top:5px;transition:all 0.3s ease;}
-.phenotype-table{margin-top:15px;background:#f8f9fa;color:#333;padding:10px;border-radius:12px;overflow-x:auto;}
+.phenotype-table{margin-top:15px;background:#f8f9fa;color:#17181a;padding:10px;border-radius:12px;overflow-x:auto;}
 .phenotype-table table{width:100%;border-collapse:collapse;}
 .phenotype-table th, .phenotype-table td{padding:5px;text-align:center;border:1px solid #ccc;}
 .example-box{background:#fff3e0;color:#333;border-left:4px solid #f39c12;padding:10px;border-radius:8px;margin-top:10px;}
@@ -46,90 +46,77 @@ h1{text-align:center;margin-bottom:10px;font-size:2.5rem;text-shadow:2px 2px 5px
 <body>
 <div class="container">
 <h1>🧬 Interactive Epistasis Lab</h1>
-<p class="subtitle">Drag & drop Locus cards to see resulting phenotype and genotypes. You can add more Locus dynamically.</p>
+<p class="subtitle">Drag & drop Locus cards to see resulting phenotype and genotypes. Each case includes a real biological example.</p>
 <div class="cases-grid" id="casesGrid"></div>
 </div>
 
 <script>
 const epistasisCases=[
+  // Recessive Epistasis
+  {id:1,name:"Recessive Epistasis",ratio:"9:3:4",
+   geneA:{dominant:{symbol:"A_",phenotype:"Pigment",color:"#27ae60"},recessive:{symbol:"aa",phenotype:"No Pigment",color:"#f1c40f"}},
+   geneB:{dominant:{symbol:"B_",phenotype:"Black",color:"#2c3e50"},recessive:{symbol:"bb",phenotype:"Brown",color:"#8B4513"}},
+   example:"Labrador Coat Color - aa masks B gene (Hartwell et al., Genetics 7th Edition)",
+   getPhenotype:(a,b)=>a==='aa'?{name:"Yellow",color:"#f1c40f"}:b==='B_'?{name:"Black",color:"#2c3e50"}:{name:"Brown",color:"#8B4513"},
+   phenotypeTable:[{genotype:"A_B_",phenotype:"Black",ratio:9},{genotype:"A_bb",phenotype:"Brown",ratio:3},{genotype:"aaB_",phenotype:"Yellow",ratio:3},{genotype:"aabb",phenotype:"Yellow",ratio:1}]
+  },
+  // Dominant Epistasis
+  {id:2,name:"Dominant Epistasis",ratio:"12:3:1",
+   geneA:{dominant:{symbol:"W_",phenotype:"White",color:"#ecf0f1"},recessive:{symbol:"ww",phenotype:"Color Allowed",color:"#f1c40f"}},
+   geneB:{dominant:{symbol:"Y_",phenotype:"Yellow",color:"#f1c40f"},recessive:{symbol:"yy",phenotype:"Green",color:"#27ae60"}},
+   example:"Squash Fruit Color - W masks Y gene (Hartwell et al.)",
+   getPhenotype:(a,b)=>a.startsWith("W")?{name:"White",color:"#ecf0f1"}:b.startsWith("Y")?{name:"Yellow",color:"#f1c40f"}:{name:"Green",color:"#27ae60"},
+   phenotypeTable:[{genotype:"W_Y_",phenotype:"White",ratio:9},{genotype:"W_yy",phenotype:"White",ratio:3},{genotype:"wwY_",phenotype:"Yellow",ratio:3},{genotype:"wwyy",phenotype:"Green",ratio:1}]
+  },
+  // Duplicate Genes with cumulative effect
+  {id:3,name:"Duplicate Genes (Cumulative)",ratio:"9:6:1",
+   geneA:{dominant:{symbol:"C_",phenotype:"Red Pigment",color:"#e74c3c"},recessive:{symbol:"cc",phenotype:"No Pigment",color:"#f1c40f"}},
+   geneB:{dominant:{symbol:"D_",phenotype:"Red Pigment",color:"#c0392b"},recessive:{symbol:"dd",phenotype:"No Pigment",color:"#f1c40f"}},
+   example:"Snapdragon Flower Pigment - cumulative effect of C and D",
+   getPhenotype:(a,b)=>{let count=0; if(a.startsWith("C")) count++; if(b.startsWith("D")) count++; return count===2?{name:"Strong Red",color:"#e74c3c"}:count===1?{name:"Light Red",color:"#c0392b"}:{name:"No Color",color:"#f1c40f"};},
+   phenotypeTable:[{genotype:"C_D_",phenotype:"Strong Red",ratio:9},{genotype:"C_dd",phenotype:"Light Red",ratio:3},{genotype:"ccD_",phenotype:"Light Red",ratio:3},{genotype:"ccdd",phenotype:"No Color",ratio:1}]
+  },
+  // Duplicate Dominant Epistasis
+  {id:4,name:"Duplicate Dominant Epistasis",ratio:"15:1",
+   geneA:{dominant:{symbol:"E_",phenotype:"White",color:"#ecf0f1"},recessive:{symbol:"ee",phenotype:"Color Allowed",color:"#f1c40f"}},
+   geneB:{dominant:{symbol:"F_",phenotype:"White",color:"#ecf0f1"},recessive:{symbol:"ff",phenotype:"Color Allowed",color:"#27ae60"}},
+   example:"Pepper Fruit Color - either dominant E or F produces White fruit",
+   getPhenotype:(a,b)=>a.startsWith("E")||b.startsWith("F")?{name:"White",color:"#ecf0f1"}:{name:"Colored",color:"#27ae60"},
+   phenotypeTable:[{genotype:"E_F_",phenotype:"White",ratio:9},{genotype:"E_ff",phenotype:"White",ratio:3},{genotype:"eeF_",phenotype:"White",ratio:3},{genotype:"eeff",phenotype:"Colored",ratio:1}]
+  },
+  // Duplicate Recessive Epistasis (Modified)
 {
-id:1,name:"Recessive Epistasis",ratio:"9:3:4",
-geneA:{dominant:{symbol:"A_",phenotype:"Pigment",color:"#27ae60"},recessive:{symbol:"aa",phenotype:"No Pigment",color:"#f1c40f"}},
-geneB:{dominant:{symbol:"B_",phenotype:"Black",color:"#2c3e50"},recessive:{symbol:"bb",phenotype:"Brown",color:"#8B4513"}},
-example:"Labrador Coat Color - aa masks B gene",
-getPhenotype:(a,b)=>a==='aa'?{name:"Yellow",color:"#f1c40f"}:b==='B_'?{name:"Black",color:"#2c3e50"}:{name:"Brown",color:"#8B4513"},
-phenotypeTable:[
-{genotype:"A_B_",phenotype:"Black",ratio:9},
-{genotype:"A_bb",phenotype:"Brown",ratio:3},
-{genotype:"aaB_",phenotype:"Yellow",ratio:3},
-{genotype:"aabb",phenotype:"Yellow",ratio:1}
-]
+  id:5,
+  name:"Duplicate Recessive Epistasis",
+  ratio:"9:7", // لأن فقط G_H_ يعطي Pigment، الباقي 15 احتمالات No Pigment
+  geneA:{dominant:{symbol:"G_",phenotype:"Pigment",color:"#16a085"},recessive:{symbol:"gg",phenotype:"No Pigment",color:"#f1c40f"}},
+  geneB:{dominant:{symbol:"H_",phenotype:"Pigment",color:"#16a085"},recessive:{symbol:"hh",phenotype:"No Pigment",color:"#f1c40f"}},
+  example:"Sweet Pea Color - only G_ + H_ gives Pigment, all others No Pigment",
+  getPhenotype:(a,b)=>(a.startsWith("G") && b.startsWith("H")) ? {name:"Pigment",color:"#16a085"} : {name:"No Pigment",color:"#f1c40f"},
+  phenotypeTable:[
+    {genotype:"G_H_",phenotype:"Pigment",ratio:9},
+    {genotype:"G_hh",phenotype:"No Pigment",ratio:3},
+    {genotype:"ggH_",phenotype:"No Pigment",ratio:3},
+    {genotype:"gghh",phenotype:"No Pigment",ratio:1}
+  ]
 },
+  // Dominant & Recessive Interaction
+  // Dominant & Recessive Interaction (Modified)
 {
-id:2,name:"Dominant Epistasis",ratio:"12:3:1",
-geneA:{dominant:{symbol:"W_",phenotype:"White",color:"#ecf0f1"},recessive:{symbol:"ww",phenotype:"Color Allowed",color:"#f1c40f"}},
-geneB:{dominant:{symbol:"Y_",phenotype:"Yellow",color:"#f1c40f"},recessive:{symbol:"yy",phenotype:"Green",color:"#27ae60"}},
-example:"Squash Fruit Color - W masks Y gene",
-getPhenotype:(a,b)=>a.startsWith("W")?{name:"White",color:"#ecf0f1"}:b.startsWith("Y")?{name:"Yellow",color:"#f1c40f"}:{name:"Green",color:"#27ae60"},
-phenotypeTable:[
-{genotype:"W_Y_",phenotype:"White",ratio:9},
-{genotype:"W_yy",phenotype:"White",ratio:3},
-{genotype:"wwY_",phenotype:"Yellow",ratio:3},
-{genotype:"wwyy",phenotype:"Green",ratio:1}
-]
-},
-{
-id:3,name:"Duplicate Genes",ratio:"9:7",
-geneA:{dominant:{symbol:"C_",phenotype:"Color",color:"#e74c3c"},recessive:{symbol:"cc",phenotype:"No Color",color:"#f1c40f"}},
-geneB:{dominant:{symbol:"D_",phenotype:"Color",color:"#e74c3c"},recessive:{symbol:"dd",phenotype:"No Color",color:"#f1c40f"}},
-example:"Flower Color - either dominant gene produces color",
-getPhenotype:(a,b)=>a.startsWith("C")||b.startsWith("D")?{name:"Colored",color:"#e74c3c"}:{name:"No Color",color:"#f1c40f"},
-phenotypeTable:[
-{genotype:"C_D_",phenotype:"Colored",ratio:9},
-{genotype:"C_dd",phenotype:"Colored",ratio:3},
-{genotype:"ccD_",phenotype:"Colored",ratio:3},
-{genotype:"ccdd",phenotype:"No Color",ratio:1}
-]
-},
-{
-id:4,name:"Complementary Genes",ratio:"9:7",
-geneA:{dominant:{symbol:"E_",phenotype:"Color",color:"#9b59b6"},recessive:{symbol:"ee",phenotype:"No Color",color:"#f1c40f"}},
-geneB:{dominant:{symbol:"F_",phenotype:"Color",color:"#9b59b6"},recessive:{symbol:"ff",phenotype:"No Color",color:"#f1c40f"}},
-example:"Flower Color - both genes needed for color",
-getPhenotype:(a,b)=>a.startsWith("E")&&b.startsWith("F")?{name:"Colored",color:"#9b59b6"}:{name:"No Color",color:"#f1c40f"},
-phenotypeTable:[
-{genotype:"E_F_",phenotype:"Colored",ratio:9},
-{genotype:"E_ff",phenotype:"No Color",ratio:3},
-{genotype:"eeF_",phenotype:"No Color",ratio:3},
-{genotype:"eeff",phenotype:"No Color",ratio:1}
-]
-},
-{
-id:5,name:"Duplicate Recessive Epistasis",ratio:"9:3:3:1",
-geneA:{dominant:{symbol:"G_",phenotype:"Pigment",color:"#16a085"},recessive:{symbol:"gg",phenotype:"No Pigment",color:"#f1c40f"}},
-geneB:{dominant:{symbol:"H_",phenotype:"Pigment",color:"#16a085"},recessive:{symbol:"hh",phenotype:"No Pigment",color:"#f1c40f"}},
-example:"Sweet Pea Color - double recessive masks pigment",
-getPhenotype:(a,b)=>a==='gg'&&b==='hh'?{name:"No Pigment",color:"#f1c40f"}:{name:"Pigment",color:"#16a085"},
-phenotypeTable:[
-{genotype:"G_H_",phenotype:"Pigment",ratio:9},
-{genotype:"G_hh",phenotype:"Pigment",ratio:3},
-{genotype:"ggH_",phenotype:"Pigment",ratio:3},
-{genotype:"gghh",phenotype:"No Pigment",ratio:1}
-]
-},
-{
-id:6,name:"Dominant & Recessive Epistasis",ratio:"13:3",
-geneA:{dominant:{symbol:"I_",phenotype:"Dominant Mask",color:"#c0392b"},recessive:{symbol:"ii",phenotype:"Recessive",color:"#f1c40f"}},
-geneB:{dominant:{symbol:"J_",phenotype:"Trait",color:"#2980b9"},recessive:{symbol:"jj",phenotype:"No Trait",color:"#95a5a6"}},
-example:"Corn Kernel Color",
-getPhenotype:(a,b)=>a.startsWith("I")?{name:"Dominant Mask",color:"#c0392b"}:b.startsWith("J")?{name:"Trait",color:"#2980b9"}:{name:"No Trait",color:"#95a5a6"},
-phenotypeTable:[
-{genotype:"I_J_",phenotype:"Dominant Mask",ratio:9},
-{genotype:"I_jj",phenotype:"Dominant Mask",ratio:3},
-{genotype:"iiJ_",phenotype:"Trait",ratio:1},
-{genotype:"iijj",phenotype:"No Trait",ratio:1}
-]
-},
+  id:6,
+  name:"Dominant & Recessive Interaction",
+  ratio:"3:13", // تقريبا، aaB_ يعطي Pink، باقي الاحتمالات Red
+  geneA:{dominant:{symbol:"ii",phenotype:"Dominant Mask",color:"#c0392b"},recessive:{symbol:"aa",phenotype:"Recessive",color:"#f1c40f"}},
+  geneB:{dominant:{symbol:"B_",phenotype:"Trait",color:"#2980b9"},recessive:{symbol:"bb",phenotype:"No Trait",color:"#95a5a6"}},
+  example:"Corn Kernel Color - aa + B_ gives Pink, all others Red",
+  getPhenotype:(a,b)=>(a==='aa' && b.startsWith("B")) ? {name:"Pink", color:"#FFC0CB"} : {name:"Red", color:"#c0392b"},
+  phenotypeTable:[
+    {genotype:"aaB_",phenotype:"Pink",ratio:3},
+    {genotype:"aabb",phenotype:"Red",ratio:1},
+    {genotype:"iiB_",phenotype:"Red",ratio:9}, // باقي الاحتمالات
+    {genotype:"ii bb",phenotype:"Red",ratio:3}
+  ]
+}
 ];
 
 const casesGrid=document.getElementById('casesGrid');
@@ -166,11 +153,7 @@ function createCaseCard(caseData){
             card.style.background=gene.color;
             card.innerHTML=`<div class="card-locus-badge">${locus}</div><div class="card-gene">${gene.symbol}</div><div class="card-phenotype">${gene.phenotype}</div>`;
             genePanel.appendChild(card);
-
-            card.addEventListener('dragstart',e=>{
-                e.dataTransfer.setData('text/plain',JSON.stringify({locus,type}));
-                card.classList.add('dragging');
-            });
+            card.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',JSON.stringify({locus,type})); card.classList.add('dragging');});
             card.addEventListener('dragend',()=>card.classList.remove('dragging'));
         });
     });
@@ -190,8 +173,6 @@ function createCaseCard(caseData){
             card.innerHTML=`<div class="card-gene">${gene.symbol}</div><div class="card-phenotype">${gene.phenotype}</div>`;
             area.appendChild(card);
             area.classList.add('has-card');
-
-            // تحديث النتيجة
             const dropA=cardWrapper.querySelector('.drop-area[data-locus="A"] .drag-card');
             const dropB=cardWrapper.querySelector('.drop-area[data-locus="B"] .drag-card');
             const resultBox=cardWrapper.querySelector('.result-box');
@@ -206,21 +187,14 @@ function createCaseCard(caseData){
         });
     });
 
-    // جدول النسب
     const tableDiv=document.getElementById(`table${caseData.id}`);
     let html='<table><tr><th>Genotype</th><th>Ratio</th><th>Phenotype</th></tr>';
-    caseData.phenotypeTable.forEach(item=>{
-        html+=`<tr><td>${item.genotype}</td><td>${item.ratio}</td><td>${item.phenotype}</td></tr>`;
-    });
+    caseData.phenotypeTable.forEach(item=>{html+=`<tr><td>${item.genotype}</td><td>${item.ratio}</td><td>${item.phenotype}</td></tr>`;});
     html+='</table>'; tableDiv.innerHTML=html;
 
-    // زر Reset
     const resetBtn=cardWrapper.querySelector('.reset-btn');
     resetBtn.addEventListener('click',()=>{
-        dropAreas.forEach(area=>{
-            const c=area.querySelector('.drag-card'); if(c) c.remove();
-            area.classList.remove('has-card');
-        });
+        dropAreas.forEach(area=>{const c=area.querySelector('.drag-card'); if(c) c.remove(); area.classList.remove('has-card');});
         const resultBox=cardWrapper.querySelector('.result-box');
         resultBox.querySelector('.result-genotype').textContent='--';
         resultBox.querySelector('.result-phenotype').textContent='--';
@@ -228,7 +202,6 @@ function createCaseCard(caseData){
     });
 }
 
-// انشاء جميع الحالات
 epistasisCases.forEach(c=>createCaseCard(c));
 </script>
 </body>
