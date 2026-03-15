@@ -106,7 +106,7 @@ const epistasisCases=[
   id:6,
   name:"Dominant & Recessive Interaction",
   ratio:"3:13", // تقريبا، aaB_ يعطي Pink، باقي الاحتمالات Red
-  geneA:{dominant:{symbol:"ii",phenotype:"Dominant Mask",color:"#c0392b"},recessive:{symbol:"aa",phenotype:"Recessive",color:"#f1c40f"}},
+  geneA:{dominant:{symbol:"A_",phenotype:"Dominant Mask",color:"#c0392b"},recessive:{symbol:"aa",phenotype:"Recessive",color:"#f1c40f"}},
   geneB:{dominant:{symbol:"B_",phenotype:"Trait",color:"#2980b9"},recessive:{symbol:"bb",phenotype:"No Trait",color:"#95a5a6"}},
   example:"Corn Kernel Color - aa + B_ gives Pink, all others Red",
   getPhenotype:(a,b)=>(a==='aa' && b.startsWith("B")) ? {name:"Pink", color:"#FFC0CB"} : {name:"Red", color:"#c0392b"},
